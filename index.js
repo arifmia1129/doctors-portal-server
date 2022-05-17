@@ -3,6 +3,8 @@ const cors = require("cors");
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion } = require('mongodb');
+const nodemailer = require('nodemailer');
+const sgTransport = require('nodemailer-sendgrid-transport');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -30,6 +32,58 @@ const verifyJWT = (req, res, next) => {
     })
 }
 
+
+const options = {
+    auth: {
+        api_key: process.env.EMAIL_SENDER_KEY
+    }
+}
+
+const emailSenderClient = nodemailer.createTransport(sgTransport(options));
+
+const appointmentEmailSender = (booking) => {
+    const { patientEmail, patientName, date, time, treatment, contact } = booking;
+    const email = {
+        from: process.env.EMAIL_SENDER,
+        to: patientEmail,
+        subject: `Your "${treatment}" appointment is confirmed on ${date}, ${time}`,
+        text: `Your "${treatment}" appointment is confirmed on ${date}, ${time}`,
+        html: `
+        <div>
+                <h2>Assalamu Alaikum Dear Sir/Mam ${patientName}</h2>,
+                <h1>We have receive your appointment.</h1>
+                <h3>Your appointment details is :</h3>
+                <ul>
+                    <li>Appointment for: ${treatment}</li>
+                    <li>Patient: ${patientName}</li>
+                    <li>Email: ${patientEmail}</li>
+                    <li>Contact No: ${contact}</li>
+                    <li>Date: ${date}</li>
+                    <li>Time slot: ${time}</li>
+                </ul>
+                <h2>Thanks for your appointment.</h2>
+                <h2>Stay with us!</h2>
+                <h2>Happy Health Service</h2>
+
+                <br />
+                <br />
+                <br />
+                <a href="https://doctors-portal-cfb7f.web.app/">About us!</a>
+                <br />
+                <h1>Doctors Portal Technical Team</h1>
+            </div>
+        `
+    };
+
+    emailSenderClient.sendMail(email, function (err, info) {
+        if (err) {
+            console.log(err);
+        }
+        else {
+            console.log('Message sent: ', info);
+        }
+    });
+}
 
 async function run() {
     try {
@@ -82,6 +136,7 @@ async function run() {
                 return res.send({ success: false, date: exists.date, time: exists.time });
             }
             const result = await bookingCollection.insertOne(booking);
+            appointmentEmailSender(booking);
             res.send({ success: true, result });
         })
 
