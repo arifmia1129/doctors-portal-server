@@ -37,10 +37,23 @@ async function run() {
         const serviceCollection = client.db("doctorsPortal").collection("service");
         const bookingCollection = client.db("doctorsPortal").collection("booking");
         const userCollection = client.db("doctorsPortal").collection("user");
+        const doctorCollection = client.db("doctorsPortal").collection("doctor");
+
+
+        const verifyAdmin = async (req, res, next) => {
+            const requester = req.decoded.email;
+            const user = await userCollection.findOne({ email: requester });
+            if (user.role === "admin") {
+                next();
+            }
+            else {
+                res.status(403).send("Forbidden access!");
+            }
+        }
 
         app.get("/service", async (req, res) => {
             const query = {};
-            const cursor = serviceCollection.find(query);
+            const cursor = serviceCollection.find(query).project({ name: 1 });
             const services = await cursor.toArray();
             res.send(services);
         });
@@ -98,22 +111,14 @@ async function run() {
             res.send({ isAdmin });
         })
 
-        app.put("/user/admin/:email", verifyJWT, async (req, res) => {
+        app.put("/user/admin/:email", verifyJWT, verifyAdmin, async (req, res) => {
             const email = req.params.email;
-            const requester = req.decoded.email;
-            const user = await userCollection.findOne({ email: requester });
-            if (user.role === "admin") {
-                const filter = { email };
-                const updateDoc = {
-                    $set: { role: "admin" },
-                };
-                const result = await userCollection.updateOne(filter, updateDoc);
-                res.send(result);
-            }
-            else {
-                res.status(403).send("Forbidden access!");
-            }
-
+            const filter = { email };
+            const updateDoc = {
+                $set: { role: "admin" },
+            };
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
         })
         app.put("/user/:email", async (req, res) => {
             const email = req.params.email;
@@ -129,6 +134,12 @@ async function run() {
                 expiresIn: "1h"
             })
             res.send({ result, token });
+        })
+
+        app.post("/doctor", verifyJWT, verifyAdmin, async (req, res) => {
+            const doctor = req.body;
+            const result = await doctorCollection.insertOne(doctor);
+            res.send(result);
         })
 
     }
