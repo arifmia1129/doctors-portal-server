@@ -85,6 +85,60 @@ const appointmentEmailSender = (booking) => {
         }
     });
 }
+const paymentEmailSender = (payment) => {
+    const {
+        appointmentId,
+        appointmentFor,
+        patientName,
+        patientEmail,
+        tnxId,
+        date,
+        time,
+        price
+    } = payment;
+    const email = {
+        from: process.env.EMAIL_SENDER,
+        to: patientEmail,
+        subject: `Your payment received for "${appointmentFor}" on ${date} at ${time}`,
+        text: `Your payment received for "${appointmentFor}" on ${date} at ${time}`,
+        html: `
+        <div>
+                <h2>Assalamu Alaikum Dear Sir/Mam ${patientName}</h2>,
+                <h1>We have receive your payment for ${appointmentFor}.</h1>
+                <h3>Your payment details is :</h3>
+                <ul>
+                    <li>Appointment id: ${appointmentId}</li>
+                    <li>Appointment for: ${appointmentFor}</li>
+                    <li>Patient: ${patientName}</li>
+                    <li>Email: ${patientEmail}</li>
+                    <li>Date: ${date}</li>
+                    <li>Time slot: ${time}</li>
+                    <li>Price: ${price}</li>
+                    <li>Tnx id: ${tnxId}</li>
+                </ul>
+                <h2>Thanks for your appointment payment.</h2>
+                <h2>Stay with us!</h2>
+                <h2>Happy Health Service!</h2>
+
+                <br />
+                <br />
+                <br />
+                <a href="https://doctors-portal-cfb7f.web.app/">About us!</a>
+                <br />
+                <h1>Doctors Portal Finance Team!</h1>
+            </div>
+        `
+    };
+
+    emailSenderClient.sendMail(email, function (err, info) {
+        if (err) {
+            console.log(err);
+        }
+        else {
+            console.log('Message sent: ', info);
+        }
+    });
+}
 
 async function run() {
     try {
@@ -188,6 +242,7 @@ async function run() {
             }
             const result = await paymentCollection.insertOne(payment);
             const updateBooking = await bookingCollection.updateOne(filter, updateDoc);
+            paymentEmailSender(payment);
             res.send({ result, updateBooking });
         })
 
