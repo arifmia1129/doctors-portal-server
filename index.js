@@ -209,7 +209,7 @@ async function run() {
             appointmentEmailSender(booking);
             res.send({ success: true, result });
         })
-
+        //
         app.get("/booking", verifyJWT, async (req, res) => {
             const decodedEmail = req.decoded.email;
             const patientEmail = req.query.email;
